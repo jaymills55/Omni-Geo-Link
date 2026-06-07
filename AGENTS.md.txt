@@ -1,0 +1,18 @@
+# OMNI ANALYTIX: GLOBAL AGENT DIRECTIVE
+
+## SYSTEM IDENTITY
+* Project: Omni Geo-Link (Utility Arm)
+* Framework: React/Vite with Tailwind CSS
+* Core Function: Spatial-Temporal URL Shortener & Dynamic QR Generator
+
+## VISUAL & AESTHETIC CONSTRAINTS
+* Theme: Blade Runner / Cyberpunk Industrial. The interface must feel like a secure, high-tech operational control terminal.
+* Background Colors: Deep dark mode exclusively. Use obsidian, charcoal, or deep midnight blue (e.g., `bg-slate-900` or `bg-gray-950`).
+* Accent Colors: High-contrast Neon Yellow and Electric Blue. Use these for active states, primary buttons, data readouts, and glowing elements.
+* Typography: Use strict monospace or geometric sans-serif fonts for a technical feel (e.g., Roboto Mono, JetBrains Mono, or Space Grotesk).
+* UI Elements: Sharp edges with minimal to zero border-radius. Utilize neon glowing drop-shadows for active inputs and successful data validations. 
+
+## FUNCTIONAL CONSTRAINTS
+* Architecture: Maintain a lightweight, single-page application (SPA) structure.
+* UI Layout: Create a clean, fast-loading dashboard interface.
+* Tone of Copy: Precise, highly automated, secure, and operational. Avoid standard consumer marketing language.

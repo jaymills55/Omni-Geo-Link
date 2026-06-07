@@ -1,0 +1,46 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Space+Grotesk:wght@400;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-omni-yellow: #FFFF00;
+  --color-omni-blue: #00E5FF;
+  --color-omni-black: #000000;
+  --color-omni-white: #FFFFFF;
+  
+  --font-sans: "Space Grotesk", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+}
+
+@layer base {
+  body {
+    @apply bg-slate-950 text-omni-white font-mono antialiased;
+  }
+}
+
+.omni-grid {
+  background-size: 40px 40px;
+  background-image: 
+    linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+}
+
+@layer utilities {
+  .brutal-border {
+    border: 1px solid var(--color-omni-white);
+  }
+
+  .brutal-button {
+    @apply border border-omni-yellow bg-black/50 text-omni-yellow font-bold px-6 py-4 uppercase tracking-widest transition-all duration-300;
+    box-shadow: 0 0 10px rgba(255, 255, 0, 0.2);
+  }
+  
+  .brutal-button:hover {
+    @apply bg-omni-yellow text-omni-black;
+    box-shadow: 0 0 15px rgba(255, 255, 0, 0.6), 0 0 30px rgba(255, 255, 0, 0.4);
+    letter-spacing: 0.15em;
+  }
+
+  .tier-badge {
+    @apply text-[10px] uppercase tracking-widest px-2 py-0.5 font-bold;
+  }
+}

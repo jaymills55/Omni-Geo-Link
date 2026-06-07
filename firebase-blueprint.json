@@ -1,0 +1,72 @@
+{
+  "entities": {
+    "Link": {
+      "title": "Link",
+      "description": "Shortened link with gating rules",
+      "type": "object",
+      "properties": {
+        "originalUrl": { "type": "string", "format": "uri" },
+        "shortSlug": { "type": "string" },
+        "tier": { "type": "string", "enum": ["tier1", "tier2", "tier3"] },
+        "ownerId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "temporalGate": {
+          "type": "object",
+          "properties": {
+            "start": { "type": "string", "format": "date-time" },
+            "end": { "type": "string", "format": "date-time" }
+          }
+        },
+        "spatialGate": {
+          "type": "object",
+          "properties": {
+            "lat": { "type": "number" },
+            "lng": { "type": "number" },
+            "radius": { "type": "number" }
+          }
+        },
+        "qrCodeUrl": { "type": "string" }
+      },
+      "required": ["originalUrl", "shortSlug", "tier", "ownerId", "createdAt"]
+    },
+    "Click": {
+      "title": "Click",
+      "description": "Click event summary",
+      "type": "object",
+      "properties": {
+        "linkId": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "count": { "type": "number" }
+      }
+    },
+    "Telemetry": {
+      "title": "Telemetry",
+      "description": "Detailed scan telemetry for Enterprise tier",
+      "type": "object",
+      "properties": {
+        "linkId": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "lat": { "type": "number" },
+        "lng": { "type": "number" },
+        "device": { "type": "string" },
+        "network": { "type": "string" },
+        "locationName": { "type": "string" }
+      }
+    }
+  },
+  "firestore": {
+    "links/{linkId}": {
+      "schema": "Link",
+      "description": "Collection of shortened links"
+    },
+    "links/{linkId}/telemetry/{telemetryId}": {
+      "schema": "Telemetry",
+      "description": "Detailed scan telemetry for a link"
+    },
+    "clicks/{clickId}": {
+      "schema": "Click",
+      "description": "Aggregated click data"
+    }
+  }
+}

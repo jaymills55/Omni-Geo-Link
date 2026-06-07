@@ -1,0 +1,6 @@
+{
+  "name": "Omni Geo-Link",
+  "description": "High-velocity URL shortening and redirection platform with space-time authorization, dynamic QR codes, and real-time telemetry analytics.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": []
+}
