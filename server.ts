@@ -33,42 +33,25 @@ async function startServer() {
 
   app.use(express.json());
 
-  // API Routes
-  app.get('/api/health', (req, res) => {
+  // === API ROUTER (GUARANTEED TO EXECUTE FIRST) ===
+  const apiRouter = express.Router();
+
+  apiRouter.get('/health', (req, res) => {
     res.json({ status: 'ok' });
   });
 
-  // Redirect Controller
-  app.get('/:slug', (req, res, next) => {
-    const { slug } = req.params;
-    
-    // Ignore common internal Vite/React paths
-    if (slug === 'api' || slug.includes('.')) {
-      return next();
-    }
-    
+  apiRouter.get('/admin/metrics', (req, res) => {
     try {
-      const stmt = db.prepare('SELECT long_url FROM omni_links WHERE slug = ?');
-      const row = stmt.get(slug) as { long_url: string } | undefined;
-
-      if (row) {
-        // Increment scan count
-        const updateStmt = db.prepare('UPDATE omni_links SET scan_count = scan_count + 1 WHERE slug = ?');
-        updateStmt.run(slug);
-        
-        // 301 Redirect to destination
-        return res.redirect(301, row.long_url);
-      } else {
-        // Fall back to frontend routing if not found in database
-        return next();
-      }
+      const stmt = db.prepare('SELECT slug, long_url, custom_domain, scan_count, created_at FROM omni_links ORDER BY created_at DESC');
+      const rows = stmt.all();
+      res.json({ metrics: rows });
     } catch (error) {
-      console.error('Redirect Error:', error);
-      return next();
+      console.error('Metrics Error:', error);
+      res.status(500).json({ error: 'Failed to retrieve metrics' });
     }
   });
 
-  app.post('/api/generate', async (req, res) => {
+  apiRouter.post('/generate', async (req, res) => {
     const { longUrl } = req.body;
     if (!longUrl) {
       return res.status(400).json({ error: 'Missing longUrl' });
@@ -98,6 +81,39 @@ async function startServer() {
     } catch (error) {
       console.error(error);
       res.status(500).json({ error: 'Failed to generate Omni-Link' });
+    }
+  });
+
+  // Mount API router strictly at /api BEFORE any other routes
+  app.use('/api', apiRouter);
+
+  // === REDIRECT CONTROLLER ===
+  app.get('/:slug', (req, res, next) => {
+    const { slug } = req.params;
+    
+    // Ignore common internal Vite/React paths
+    if (slug === 'api' || slug.includes('.')) {
+      return next();
+    }
+    
+    try {
+      const stmt = db.prepare('SELECT long_url FROM omni_links WHERE slug = ?');
+      const row = stmt.get(slug) as { long_url: string } | undefined;
+
+      if (row) {
+        // Increment scan count
+        const updateStmt = db.prepare('UPDATE omni_links SET scan_count = scan_count + 1 WHERE slug = ?');
+        updateStmt.run(slug);
+        
+        // 301 Redirect to destination
+        return res.redirect(301, row.long_url);
+      } else {
+        // Fall back to frontend routing if not found in database
+        return next();
+      }
+    } catch (error) {
+      console.error('Redirect Error:', error);
+      return next();
     }
   });
 
