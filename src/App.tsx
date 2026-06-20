@@ -12,12 +12,25 @@ import { useState } from 'react';
 import { ResultsPanel } from './components/ResultsPanel';
 import { AdminAnalytix } from './components/AdminAnalytix';
 
+const US_STATES = [
+  "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA", 
+  "HI", "ID", "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD", 
+  "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH", "NJ", 
+  "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA", "RI", "SC", 
+  "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY"
+];
+
 const Dashboard = () => {
   const [url, setUrl] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedSlug, setGeneratedSlug] = useState<string | null>(null);
   const [generatedShortUrl, setGeneratedShortUrl] = useState<string | null>(null);
   const [qrBase64, setQrBase64] = useState<string | null>(null);
+  
+  // Tier 2 Geo-Fencing State
+  const [geoActive, setGeoActive] = useState(false);
+  const [targetRegion, setTargetRegion] = useState('');
+  const [alternateUrl, setAlternateUrl] = useState('');
 
   const handleInitiate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,7 +44,12 @@ const Dashboard = () => {
       const response = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ longUrl: url })
+        body: JSON.stringify({ 
+          longUrl: url,
+          geoActive,
+          targetRegion: geoActive ? targetRegion : null,
+          alternateUrl: geoActive ? alternateUrl : null
+        })
       });
       
       const data = await response.json();
@@ -87,6 +105,52 @@ const Dashboard = () => {
                 disabled={isGenerating}
               />
             </div>
+          </div>
+
+          {/* Advanced Routing Section */}
+          <div className="border border-neutral-800 bg-black/50 p-6 space-y-4">
+            <label className="flex items-center gap-3 cursor-pointer group">
+              <input 
+                type="checkbox" 
+                checked={geoActive}
+                onChange={(e) => setGeoActive(e.target.checked)}
+                className="w-4 h-4 bg-transparent border border-omni-blue/50 appearance-none checked:bg-omni-yellow checked:border-omni-yellow relative before:content-[''] before:absolute before:inset-0 before:opacity-0 checked:before:opacity-100 before:bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJibGFjayIgc3Ryb2tlLXdpZHRoPSIzIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjxwb2x5bGluZSBwb2ludHM9IjIwIDYgOSAxNyA0IDEyIj48L3BvbHlsaW5lPjwvc3ZnPg==')] before:bg-no-repeat before:bg-center cursor-pointer outline-none transition-all shadow-[0_0_10px_rgba(255,255,0,0)] checked:shadow-[0_0_10px_rgba(255,255,0,0.5)]"
+              />
+              <span className={`text-sm tracking-widest uppercase font-bold transition-colors ${geoActive ? 'text-omni-yellow' : 'text-neutral-500 group-hover:text-omni-white'}`}>
+                Enable Geo-Fencing (Tier 2)
+              </span>
+            </label>
+
+            {geoActive && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-neutral-800 animate-in fade-in slide-in-from-top-2 duration-300">
+                <div className="relative">
+                  <div className="text-[10px] text-omni-yellow font-bold tracking-widest uppercase mb-2">Target Region (State)</div>
+                  <select 
+                    required={geoActive}
+                    value={targetRegion}
+                    onChange={(e) => setTargetRegion(e.target.value)}
+                    className="w-full bg-neutral-900 border border-neutral-700 focus:border-omni-yellow focus:shadow-[0_0_10px_rgba(255,255,0,0.3)] text-omni-white px-4 py-3 outline-none font-mono text-sm appearance-none cursor-pointer"
+                  >
+                    <option value="" disabled>SELECT STATE</option>
+                    {US_STATES.map(state => (
+                      <option key={state} value={state}>{state}</option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div className="relative">
+                  <div className="text-[10px] text-omni-yellow font-bold tracking-widest uppercase mb-2">Alternate URL</div>
+                  <input 
+                    type="url"
+                    required={geoActive}
+                    value={alternateUrl}
+                    onChange={(e) => setAlternateUrl(e.target.value)}
+                    placeholder="https://regional-destination.com"
+                    className="w-full bg-neutral-900 border border-neutral-700 focus:border-omni-yellow focus:shadow-[0_0_10px_rgba(255,255,0,0.3)] text-omni-white px-4 py-3 outline-none font-mono text-sm"
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           <button 
