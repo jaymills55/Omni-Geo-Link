@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 import fs from 'fs';
 import QRCode from 'qrcode';
 import Database from 'better-sqlite3';
+import geoip from 'geoip-lite';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -16,6 +17,9 @@ const dbPath = process.env.RAILWAY_VOLUME_MOUNT_PATH
 const db = new Database(dbPath);
 
 // Create the omni_links table if it doesn't exist
+// Force drop for local QA testing to ensure clean schema
+db.exec('DROP TABLE IF EXISTS omni_links');
+
 db.exec(`
   CREATE TABLE IF NOT EXISTS omni_links (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -26,6 +30,15 @@ db.exec(`
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )
 `);
+
+// Safe migration for new Tier 2 geo-fencing columns
+try {
+  db.exec('ALTER TABLE omni_links ADD COLUMN geo_active INTEGER DEFAULT 0');
+  db.exec('ALTER TABLE omni_links ADD COLUMN target_region TEXT');
+  db.exec('ALTER TABLE omni_links ADD COLUMN alternate_url TEXT');
+} catch (e) {
+  // Columns already exist
+}
 
 async function startServer() {
   const app = express();
@@ -52,7 +65,7 @@ async function startServer() {
   });
 
   apiRouter.post('/generate', async (req, res) => {
-    const { longUrl } = req.body;
+    const { longUrl, geoActive, targetRegion, alternateUrl } = req.body;
     if (!longUrl) {
       return res.status(400).json({ error: 'Missing longUrl' });
     }
@@ -74,8 +87,8 @@ async function startServer() {
       });
 
       // Insert into database
-      const insertStmt = db.prepare('INSERT INTO omni_links (slug, long_url) VALUES (?, ?)');
-      insertStmt.run(slug, longUrl);
+      const insertStmt = db.prepare('INSERT INTO omni_links (slug, long_url, geo_active, target_region, alternate_url) VALUES (?, ?, ?, ?, ?)');
+      insertStmt.run(slug, longUrl, geoActive ? 1 : 0, targetRegion || null, alternateUrl || null);
 
       res.json({ slug, shortUrl, qrBase64 });
     } catch (error) {
@@ -97,16 +110,32 @@ async function startServer() {
     }
     
     try {
-      const stmt = db.prepare('SELECT long_url FROM omni_links WHERE slug = ?');
-      const row = stmt.get(slug) as { long_url: string } | undefined;
+      const stmt = db.prepare('SELECT long_url, geo_active, target_region, alternate_url FROM omni_links WHERE slug = ?');
+      const link = stmt.get(slug) as { long_url: string, geo_active: number, target_region: string | null, alternate_url: string | null } | undefined;
 
-      if (row) {
+      if (link) {
         // Increment scan count
         const updateStmt = db.prepare('UPDATE omni_links SET scan_count = scan_count + 1 WHERE slug = ?');
         updateStmt.run(slug);
         
-        // 301 Redirect to destination
-        return res.redirect(301, row.long_url);
+        // Tier 2 Geo-Fencing Logic
+        let destination = link.long_url;
+        
+        const isGeoActive = link.geo_active === 1 || link.geo_active === true || link.geo_active === 'true';
+
+        if (isGeoActive && link.target_region && link.alternate_url) {
+          const ip = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '') as string;
+          // Clean comma-separated proxy IPs
+          const cleanIp = ip.split(',')[0].trim();
+          const geo = geoip.lookup(cleanIp);
+
+          if (geo && geo.region === link.target_region) {
+            destination = link.alternate_url;
+          }
+        }
+        
+        // 301 Redirect to computed destination
+        return res.redirect(301, destination);
       } else {
         // Fall back to frontend routing if not found in database
         return next();
