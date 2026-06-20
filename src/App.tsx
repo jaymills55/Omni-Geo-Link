@@ -10,6 +10,7 @@ import { OmniVista } from './components/OmniVista';
 import { Zap, Shield } from 'lucide-react';
 import { useState } from 'react';
 import { ResultsPanel } from './components/ResultsPanel';
+import { AdminAnalytix } from './components/AdminAnalytix';
 
 const Dashboard = () => {
   const [url, setUrl] = useState('');
@@ -136,6 +137,7 @@ export default function App() {
         <Route path="/" element={<Dashboard />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/vista" element={<OmniVista />} />
+        <Route path="/omni-admin" element={<AdminAnalytix />} />
         <Route path="/r/:slug" element={<RedirectHandler />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
