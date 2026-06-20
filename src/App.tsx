@@ -15,6 +15,7 @@ const Dashboard = () => {
   const [url, setUrl] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedSlug, setGeneratedSlug] = useState<string | null>(null);
+  const [generatedShortUrl, setGeneratedShortUrl] = useState<string | null>(null);
   const [qrBase64, setQrBase64] = useState<string | null>(null);
 
   const handleInitiate = async (e: React.FormEvent) => {
@@ -22,6 +23,7 @@ const Dashboard = () => {
     if (!url) return;
     setIsGenerating(true);
     setGeneratedSlug(null);
+    setGeneratedShortUrl(null);
     setQrBase64(null);
 
     try {
@@ -34,6 +36,7 @@ const Dashboard = () => {
       const data = await response.json();
       if (response.ok) {
         setGeneratedSlug(data.slug);
+        setGeneratedShortUrl(data.shortUrl);
         setQrBase64(data.qrBase64);
       } else {
         console.error('Generation failed:', data.error);
@@ -104,8 +107,8 @@ const Dashboard = () => {
           </button>
         </form>
 
-        {generatedSlug && qrBase64 && (
-          <ResultsPanel slug={generatedSlug} qrBase64={qrBase64} />
+        {generatedSlug && generatedShortUrl && qrBase64 && (
+          <ResultsPanel slug={generatedSlug} shortUrl={generatedShortUrl} qrBase64={qrBase64} />
         )}
       </main>
 

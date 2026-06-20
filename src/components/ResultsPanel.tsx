@@ -3,15 +3,18 @@ import { Copy, Check, ShieldCheck } from 'lucide-react';
 
 interface ResultsPanelProps {
   slug: string;
+  shortUrl: string;
   qrBase64: string;
 }
 
-export const ResultsPanel: React.FC<ResultsPanelProps> = ({ slug, qrBase64 }) => {
+export const ResultsPanel: React.FC<ResultsPanelProps> = ({ slug, shortUrl, qrBase64 }) => {
   const [copied, setCopied] = useState(false);
-  const fullUrl = `omni.link/${slug}`;
+  
+  // Clean up URL for display (optional, but requested to "use this baseUrl")
+  const displayUrl = shortUrl.replace(/^https?:\/\//, '');
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(fullUrl);
+    navigator.clipboard.writeText(shortUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -49,7 +52,7 @@ export const ResultsPanel: React.FC<ResultsPanelProps> = ({ slug, qrBase64 }) =>
           <input 
             type="text" 
             readOnly 
-            value={fullUrl} 
+            value={displayUrl} 
             className="flex-1 bg-transparent px-4 py-3 font-mono text-omni-yellow font-bold tracking-[0.2em] outline-none w-full text-center"
           />
           <button 

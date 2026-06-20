@@ -10,7 +10,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Initialize SQLite database
-const dbPath = path.join(process.cwd(), 'database.sqlite');
+const dbPath = process.env.RAILWAY_VOLUME_MOUNT_PATH
+  ? path.join(process.env.RAILWAY_VOLUME_MOUNT_PATH, 'database.sqlite')
+  : path.join(process.cwd(), 'database.sqlite');
 const db = new Database(dbPath);
 
 // Create the omni_links table if it doesn't exist
@@ -74,8 +76,12 @@ async function startServer() {
 
     try {
       const slug = Math.random().toString(36).substring(2, 8).toUpperCase();
-      const shortUrl = `omni.link/${slug}`;
-      const qrBase64 = await QRCode.toDataURL(`https://${shortUrl}`, {
+      
+      // Dynamic Base URL
+      const baseUrl = process.env.PUBLIC_URL || 'http://localhost:3000';
+      const shortUrl = `${baseUrl.replace(/\/$/, '')}/${slug}`;
+      
+      const qrBase64 = await QRCode.toDataURL(shortUrl, {
         color: {
           dark: '#FFFF00', // Omni Yellow
           light: '#00000000' // Transparent
