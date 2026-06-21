@@ -25,12 +25,14 @@ const Dashboard = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedSlug, setGeneratedSlug] = useState<string | null>(null);
   const [generatedShortUrl, setGeneratedShortUrl] = useState<string | null>(null);
-  const [qrBase64, setQrBase64] = useState<string | null>(null);
   
   // Tier 2 Geo-Fencing State
   const [geoActive, setGeoActive] = useState(false);
   const [targetRegion, setTargetRegion] = useState('');
   const [alternateUrl, setAlternateUrl] = useState('');
+
+  // Tier 3 Advanced QR Customization
+  const [logoUrl, setLogoUrl] = useState('');
 
   const handleInitiate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,7 +40,6 @@ const Dashboard = () => {
     setIsGenerating(true);
     setGeneratedSlug(null);
     setGeneratedShortUrl(null);
-    setQrBase64(null);
 
     try {
       const response = await fetch('/api/generate', {
@@ -48,11 +49,13 @@ const Dashboard = () => {
           longUrl: url,
           geoActive,
           targetRegion: geoActive ? targetRegion : null,
-          alternateUrl: geoActive ? alternateUrl : null
+          alternateUrl: geoActive ? alternateUrl : null,
+          logoUrl: logoUrl || null
         })
       });
       
       const data = await response.json();
+      
       if (response.ok) {
         setGeneratedSlug(data.slug);
         setGeneratedShortUrl(data.shortUrl);
@@ -153,6 +156,21 @@ const Dashboard = () => {
             )}
           </div>
 
+          {/* Visual Branding Section */}
+          <div className="border border-neutral-800 bg-black/50 p-6 space-y-4">
+            <h3 className="text-sm tracking-widest uppercase font-bold text-omni-yellow">Visual Branding (Tier 3)</h3>
+            <div className="relative">
+              <div className="text-[10px] text-neutral-500 font-bold tracking-widest uppercase mb-2">QR Center Logo (URL)</div>
+              <input 
+                type="url"
+                value={logoUrl}
+                onChange={(e) => setLogoUrl(e.target.value)}
+                placeholder="https://example.com/logo.png"
+                className="w-full bg-neutral-900 border border-neutral-700 focus:border-omni-yellow focus:shadow-[0_0_10px_rgba(255,255,0,0.3)] text-omni-white px-4 py-3 outline-none font-mono text-sm"
+              />
+            </div>
+          </div>
+
           <button 
             type="submit" 
             disabled={isGenerating || !url}
@@ -172,8 +190,21 @@ const Dashboard = () => {
           </button>
         </form>
 
-        {generatedSlug && generatedShortUrl && qrBase64 && (
-          <ResultsPanel slug={generatedSlug} shortUrl={generatedShortUrl} qrBase64={qrBase64} />
+        {generatedSlug && generatedShortUrl && (
+          <ResultsPanel 
+            slug={generatedSlug} 
+            shortUrl={generatedShortUrl} 
+            logoUrl={logoUrl}
+            onReset={() => {
+              setGeneratedSlug(null);
+              setGeneratedShortUrl(null);
+              setUrl('');
+              setGeoActive(false);
+              setTargetRegion('');
+              setAlternateUrl('');
+              setLogoUrl('');
+            }}
+          />
         )}
       </main>
 

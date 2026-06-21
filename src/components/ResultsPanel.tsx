@@ -1,16 +1,19 @@
-import React, { useState } from 'react';
-import { Copy, Check, ShieldCheck } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { Copy, Check, ShieldCheck, Download, RotateCcw } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 
 interface ResultsPanelProps {
   slug: string;
   shortUrl: string;
-  qrBase64: string;
+  logoUrl?: string;
+  onReset?: () => void;
 }
 
-export const ResultsPanel: React.FC<ResultsPanelProps> = ({ slug, shortUrl, qrBase64 }) => {
+export const ResultsPanel: React.FC<ResultsPanelProps> = ({ slug, shortUrl, logoUrl, onReset }) => {
   const [copied, setCopied] = useState(false);
+  const qrRef = useRef<SVGSVGElement>(null);
   
-  // Clean up URL for display (optional, but requested to "use this baseUrl")
+  // Clean up URL for display
   const displayUrl = shortUrl.replace(/^https?:\/\//, '');
 
   const handleCopy = () => {
@@ -19,23 +22,49 @@ export const ResultsPanel: React.FC<ResultsPanelProps> = ({ slug, shortUrl, qrBa
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleExport = () => {
+    if (!qrRef.current) return;
+    const svgData = new XMLSerializer().serializeToString(qrRef.current);
+    const blob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `omni-qr-${slug}.svg`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="mt-8 border border-omni-yellow shadow-[0_0_15px_rgba(255,255,0,0.3)] bg-black/80 p-8 flex flex-col md:flex-row gap-8 items-center animate-in fade-in slide-in-from-top-4 duration-500 relative overflow-hidden">
       {/* Decorative scanline overlay */}
       <div className="absolute inset-0 bg-[linear-gradient(rgba(0,229,255,0.03)_50%,transparent_50%)] bg-[length:100%_4px] pointer-events-none"></div>
       
       {/* QR Code Section */}
-      <div className="relative group shrink-0">
-        <div className="absolute -inset-1 bg-omni-yellow/20 blur-md group-hover:bg-omni-yellow/40 transition-all duration-300"></div>
-        <div className="relative border border-omni-yellow bg-black p-2 flex items-center justify-center min-w-[120px] min-h-[120px]">
-          {qrBase64 ? (
-            <img src={qrBase64} alt="QR Code" className="w-full h-full object-contain drop-shadow-[0_0_8px_rgba(255,255,0,0.5)]" />
-          ) : (
-            <div className="w-[120px] h-[120px] border border-dashed border-omni-yellow/50 flex items-center justify-center">
-              <span className="text-[10px] text-omni-yellow/50 font-mono text-center">GENERATING<br/>MATRIX</span>
-            </div>
-          )}
+      <div className="relative group shrink-0 flex flex-col items-center gap-4 z-10">
+        <div className="relative border border-omni-yellow bg-black p-4 flex items-center justify-center shadow-[0_0_15px_rgba(255,255,0,0.4)]">
+          <QRCodeSVG 
+            ref={qrRef}
+            value={shortUrl} 
+            size={160}
+            bgColor="#0a0a0a"
+            fgColor="#eaff00"
+            level="H"
+            includeMargin={false}
+            imageSettings={logoUrl ? {
+              src: logoUrl,
+              height: 40,
+              width: 40,
+              excavate: true,
+            } : undefined}
+          />
         </div>
+        <button 
+          onClick={handleExport}
+          className="flex items-center gap-2 text-xs font-bold tracking-widest uppercase text-black bg-omni-yellow px-4 py-2 hover:bg-white hover:shadow-[0_0_15px_rgba(255,255,0,0.8)] transition-all duration-300"
+        >
+          <Download className="w-4 h-4" /> Export SVG
+        </button>
       </div>
 
       {/* URL Details Section */}
@@ -63,6 +92,15 @@ export const ResultsPanel: React.FC<ResultsPanelProps> = ({ slug, shortUrl, qrBa
             {copied ? <Check className="w-5 h-5 text-green-400 group-hover:text-black scale-110 transition-transform" /> : <Copy className="w-5 h-5 text-neutral-400 group-hover:text-black group-hover:scale-125 transition-transform" />}
           </button>
         </div>
+
+        {onReset && (
+          <button 
+            onClick={onReset}
+            className="mt-4 flex items-center gap-2 text-xs font-bold tracking-widest uppercase text-neutral-500 hover:text-omni-white transition-colors"
+          >
+            <RotateCcw className="w-4 h-4" /> Generate Another
+          </button>
+        )}
       </div>
     </div>
   );
