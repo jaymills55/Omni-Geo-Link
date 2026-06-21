@@ -3,7 +3,6 @@ import { createServer as createViteServer } from 'vite';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
-import QRCode from 'qrcode';
 import Database from 'better-sqlite3';
 import geoip from 'geoip-lite';
 
@@ -76,21 +75,12 @@ async function startServer() {
       // Dynamic Base URL
       const baseUrl = process.env.PUBLIC_URL || 'http://localhost:3000';
       const shortUrl = `${baseUrl.replace(/\/$/, '')}/${slug}`;
-      
-      const qrBase64 = await QRCode.toDataURL(shortUrl, {
-        color: {
-          dark: '#FFFF00', // Omni Yellow
-          light: '#00000000' // Transparent
-        },
-        margin: 1,
-        width: 120
-      });
 
       // Insert into database
       const insertStmt = db.prepare('INSERT INTO omni_links (slug, long_url, geo_active, target_region, alternate_url) VALUES (?, ?, ?, ?, ?)');
       insertStmt.run(slug, longUrl, geoActive ? 1 : 0, targetRegion || null, alternateUrl || null);
 
-      res.json({ slug, shortUrl, qrBase64 });
+      res.json({ slug, shortUrl });
     } catch (error) {
       console.error(error);
       res.status(500).json({ error: 'Failed to generate Omni-Link' });
