@@ -1,23 +1,22 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# Omni Geo-Link Engine
 
-# Run and deploy your AI Studio app
+A full-stack, enterprise-grade QR code generator and dynamic routing application designed for high-ticket marketing campaigns.
 
-This contains everything you need to run your app locally.
+## 🚀 Tech Stack Architecture
+* **Frontend:** React.js, Vite, HTML5 Canvas Rendering
+* **Backend:** Node.js, Express.js
+* **Database & Routing:** SQLite, IP Geolocation (`geoip-lite`)
+* **Deployment:** GitHub CI/CD Actions, Railway Cloud Hosting
 
-View your app in AI Studio: https://ai.studio/apps/63927891-5959-4f7f-95c4-7d084c783caf
+## 🛠️ Core Features & Deep Dive
+* **Tier 2 Geo-Fencing Perimeter:** Built a secure backend telemetry pipeline capable of intercepting incoming public IP addresses, parsing geographic metadata in milliseconds, and executing strict, state-level routing rules to redirect users based on physical location constraints.
+* **Dynamic Canvas Rendering:** Overhauled the frontend visual layer to programmatically generate high-contrast, brand-aligned QR codes featuring an embedded center anchor logo (Level H error correction matrix).
+* **Automated Cloud Deployment:** Architected a continuous integration and deployment (CI/CD) framework syncing this repository straight to a live Railway cloud deployment layer for immediate frontend-to-backend database parity.
 
-## Run Locally
+## 📈 The Impact
+> Shifted from static link routing to a dynamic, geo-intelligent perimeter, allowing for location-exclusive data access and advanced campaign tracking.
 
-**Prerequisites:**  Node.js
-
-
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
-"# Omni-Geo-Link" 
-"# Omni-Geo-Link" 
-"# Omni-Geo-Link" 
+## 💻 Local Installation & Setup
+1. Clone the repository:
+   ```bash
+   git clone [https://github.com/your-username/omni-geo-link.git](https://github.com/your-username/omni-geo-link.git)
