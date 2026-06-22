@@ -24,7 +24,7 @@ A full-stack, enterprise-grade QR code generator and dynamic routing application
 1. **Clone the repository:**
    ```bash
    git clone [https://github.com/jaymills55/Omni-Geo-Link.git](https://github.com/jaymills55/Omni-Geo-Link.git)
-   cd backend
+cd backend
 npm install
 cd ../frontend
 npm install
