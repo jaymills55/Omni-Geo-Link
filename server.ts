@@ -1,5 +1,4 @@
 import express from 'express';
-import { resolveLink } from './api/link-handler.js';
 import { createLink } from './api/create-link.js';
 import { getAllLinks, getLinkBySlug } from './api/get-link.js';
 import { getAssetAnalytics } from './api/analytics.js';
@@ -28,7 +27,6 @@ app.post('/api/create-link', createLink);
 app.get('/api/links', getAllLinks);
 app.get('/api/links/:slug', getLinkBySlug);
 app.get('/api/analytics/:slug', getAssetAnalytics);
-app.get('/:slug', resolveLink);
 
 // Health check endpoint
 app.get('/system/health', (req, res) => {
