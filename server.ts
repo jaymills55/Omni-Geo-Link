@@ -1,14 +1,9 @@
 import express from 'express';
 import cors from 'cors';
 import QRCode from 'qrcode';
-import { createRequire } from 'module';
 import { S3Client } from '@aws-sdk/client-s3';
 import { Upload } from '@aws-sdk/lib-storage';
 import stream from 'stream';
-
-// The safest way to load the Archiver package in the main thread
-const require = createRequire(import.meta.url);
-const archiver = require('archiver');
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -57,14 +52,18 @@ app.post('/api/generate-batch', async (req, res) => {
         batchId: batchId
     });
 
-    // 2. The Floating Promise: Run the heavy lifting securely in the background
+    // 2. The Floating Promise
     (async () => {
         try {
             console.log(`[Batch ${batchId}] Starting background processing...`);
-            const passThroughStream = new stream.PassThrough();
             
-            // THE FIX: Explicitly call the .create() method
-            const archive = archiver.create('zip', { zlib: { level: 9 } });
+            // THE FIX: Native Dynamic Import at runtime. 
+            // This completely bypasses the ES Module/CommonJS conflict.
+            const archiverModule = await import('archiver');
+            const createArchive = archiverModule.default || archiverModule;
+            
+            const passThroughStream = new stream.PassThrough();
+            const archive = createArchive('zip', { zlib: { level: 9 } });
             
             archive.on('error', err => { throw err; });
             archive.pipe(passThroughStream);
