@@ -1,9 +1,13 @@
 import express from 'express';
 import cors from 'cors';
 import QRCode from 'qrcode';
+import { createRequire } from 'module';
 import { S3Client } from '@aws-sdk/client-s3';
 import { Upload } from '@aws-sdk/lib-storage';
 import stream from 'stream';
+
+const require = createRequire(import.meta.url);
+const archiver = require('archiver');
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -28,7 +32,7 @@ const s3 = new S3Client({
 });
 
 // ---------------------------------------------------------
-// ENDPOINT: BATCH GENERATION (/api/generate-batch)
+// ENDPOINT: BATCH GENERATION
 // ---------------------------------------------------------
 app.post('/api/generate-batch', async (req, res) => {
     const { clientId, batchVolume, destinationUrl, routingTier } = req.body;
@@ -45,28 +49,21 @@ app.post('/api/generate-batch', async (req, res) => {
         generatedLinks.push({ slug: randomSlug, destination_url: destinationUrl });
     }
     
-    // 1. Immediately release the frontend so the UI loading bar completes
+    // 1. Respond to the frontend
     res.status(202).json({
         success: true,
         message: 'Batch accepted and processing in the background.',
         batchId: batchId
     });
 
-   // 2. The Floating Promise: Run the heavy lifting securely in the background
+    // 2. Process in background
     (async () => {
         try {
             console.log(`[Batch ${batchId}] Starting background processing...`);
-            
-            // HARDENED IMPORT: Try to find the function in the default, the named 'archiver' export, or the module itself
-            const mod = await import('archiver');
-            const archiverFn = mod.default || mod.archiver || mod;
-            
-            // Safety check
-            if (typeof archiverFn !== 'function') {
-                throw new Error(`Archiver failed to load. Export type is ${typeof archiverFn}`);
-            }
-
             const passThroughStream = new stream.PassThrough();
+            
+            // Resolve archiver as a function or object property
+            const archiverFn = (typeof archiver === 'function') ? archiver : (archiver.create || archiver.default);
             const archive = archiverFn('zip', { zlib: { level: 9 } });
             
             archive.on('error', err => { throw err; });
@@ -102,3 +99,10 @@ app.post('/api/generate-batch', async (req, res) => {
             console.error(`[Background Error] Batch ${batchId} failed:`, error);
         }
     })();
+});
+
+app.get('/system/health', (req, res) => res.status(200).send('OK'));
+
+app.listen(PORT, () => {
+    console.log(`[Omni Analytix] Server running securely on port ${PORT}`);
+});
