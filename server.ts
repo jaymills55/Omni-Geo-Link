@@ -1,39 +1,23 @@
 import express from 'express';
-import { createLink } from './api/create-link.js';
-import { getAllLinks, getLinkBySlug } from './api/get-link.js';
-import { getAssetAnalytics } from './api/analytics.js';
-import batchHandler from './api/batch-handler.js';
 import cors from 'cors';
+import batchRouter from './api/batch-controller.js'; // The only file we know actually exists
 
 const app = express();
-const PORT = process.env.PORT || 3000;
 
-// Trust proxy if running behind a load balancer/reverse proxy
-app.set('trust proxy', true);
-
-// Parse incoming JSON payloads
-app.use(express.json());
-
-// Enable CORS for frontend connectivity
+// The CORS gate to allow your React app to connect
 app.use(cors({
-    origin: ['http://localhost:5173', 'https://your-future-frontend-domain.com'],
+    origin: ['http://localhost:5173'],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     credentials: true
 }));
 
-// Mount the routes
-app.use('/api', batchHandler);
-app.post('/api/create-link', createLink);
-app.get('/api/links', getAllLinks);
-app.get('/api/links/:slug', getLinkBySlug);
-app.get('/api/analytics/:slug', getAssetAnalytics);
+app.use(express.json());
 
-// Health check endpoint
-app.get('/system/health', (req, res) => {
-    res.status(200).send('OK');
-});
+// The ONLY active route
+app.use('/api', batchRouter);
 
-// Start the server
+// The Engine Ignition
+const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
-    console.log(`Omni Geo Link server is running on port ${PORT}`);
+    console.log(`[Omni Analytix] Server running securely on port ${PORT}`);
 });
