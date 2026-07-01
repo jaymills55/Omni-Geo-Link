@@ -79,8 +79,9 @@ app.post('/api/generate-batch', async (req, res) => {
             const qrPromises = generatedLinks.map(async (link, index) => {
                 // Safeguard: Ensure link text exists before passing to QR generator
                 const textToEncode = link.destination_url || 'https://omni-analytix.com';
+                // FIX: Changed errorCorrectionLevel from 'H' to 'M'
                 const qrBuffer = await QRCode.toBuffer(textToEncode, { 
-                    errorCorrectionLevel: 'H',
+                    errorCorrectionLevel: 'M',
                     margin: 2,
                     color: { dark: '#000000', light: '#ffffff' }
                 });
