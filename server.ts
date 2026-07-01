@@ -32,13 +32,8 @@ const s3 = new S3Client({
 app.post('/api/generate-batch', async (req, res) => {
     const { clientId, batchVolume, destinationUrl, routingTier } = req.body;
     
-    // --- ADDED VALIDATION ---
     if (!destinationUrl || destinationUrl.trim() === '') {
-        return res.status(400).json({ error: 'Missing destination URL. The QR code cannot be empty.' });
-    }
-    
-    if (!batchVolume || batchVolume > 500) {
-        return res.status(400).json({ error: 'Invalid volume. Maximum batch size is 500.' });
+        return res.status(400).json({ error: 'Missing destination URL.' });
     }
     
     const batchId = Date.now();
@@ -49,19 +44,22 @@ app.post('/api/generate-batch', async (req, res) => {
         generatedLinks.push({ slug: randomSlug, destination_url: destinationUrl });
     }
     
-    res.status(202).json({
-        success: true,
-        message: 'Batch accepted and processing in the background.',
-        batchId: batchId
-    });
+    res.status(202).json({ success: true, batchId: batchId });
 
     (async () => {
         try {
             console.log(`[Batch ${batchId}] Starting background processing...`);
             
-            const archive = new archiver.Archiver('zip', { zlib: { level: 9 } });
-            const passThroughStream = new stream.PassThrough();
+            // DUAL-MODE INITIALIZATION
+            // Attempt standard factory call, fall back to constructor if needed
+            let archive;
+            if (typeof archiver === 'function') {
+                archive = archiver('zip', { zlib: { level: 9 } });
+            } else {
+                archive = new archiver.Archiver('zip', { zlib: { level: 9 } });
+            }
             
+            const passThroughStream = new stream.PassThrough();
             archive.on('error', err => { throw err; });
             archive.pipe(passThroughStream);
 
@@ -69,7 +67,7 @@ app.post('/api/generate-batch', async (req, res) => {
             const upload = new Upload({
                 client: s3,
                 params: {
-                    Bucket: process.env.AWS_BUCKET_NAME || 'omni-batch-bucket',
+                    Bucket: process.env.AWS_BUCKET_NAME || 'omni-analytix-batches-prod',
                     Key: fileName,
                     Body: passThroughStream,
                     ContentType: 'application/zip'
@@ -77,16 +75,13 @@ app.post('/api/generate-batch', async (req, res) => {
             });
 
             const qrPromises = generatedLinks.map(async (link, index) => {
-                // Safeguard: Ensure link text exists before passing to QR generator
                 const textToEncode = link.destination_url || 'https://omni-analytix.com';
-                // FIX: Changed errorCorrectionLevel from 'H' to 'M'
                 const qrBuffer = await QRCode.toBuffer(textToEncode, { 
                     errorCorrectionLevel: 'M',
                     margin: 2,
                     color: { dark: '#000000', light: '#ffffff' }
                 });
-                const qrFileName = `${link.slug || 'omni_qr_' + index}.png`;
-                archive.append(qrBuffer, { name: qrFileName });
+                archive.append(qrBuffer, { name: `${link.slug}.png` });
             });
 
             await Promise.all(qrPromises);
