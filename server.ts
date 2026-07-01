@@ -4,15 +4,14 @@ import { Worker, isMainThread, parentPort } from 'worker_threads';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import QRCode from 'qrcode';
-import { createRequire } from 'module';
+import archiver from 'archiver';
 import { S3Client } from '@aws-sdk/client-s3';
 import { Upload } from '@aws-sdk/lib-storage';
 import stream from 'stream';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const require = createRequire(import.meta.url);
-const archiver = require('archiver');
+
 
 // =========================================================
 // THREAD SPLITTING LOGIC
