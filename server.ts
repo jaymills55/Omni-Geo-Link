@@ -4,7 +4,7 @@ import { Worker, isMainThread, parentPort } from 'worker_threads';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import QRCode from 'qrcode';
-import archiver from 'archiver';
+import { createRequire } from 'module';
 import { S3Client } from '@aws-sdk/client-s3';
 import { Upload } from '@aws-sdk/lib-storage';
 import stream from 'stream';
@@ -12,6 +12,13 @@ import stream from 'stream';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// =========================================================
+// THE COMMONJS BRIDGE
+// =========================================================
+const require = createRequire(import.meta.url);
+const archiverModule = require('archiver');
+// This manually unwraps the object Node creates so it is guaranteed to be a function
+const createArchive = archiverModule.default || archiverModule;
 
 // =========================================================
 // THREAD SPLITTING LOGIC
@@ -27,16 +34,12 @@ if (isMainThread) {
     app.set('trust proxy', true);
     app.use(express.json());
     
-    // The CORS gate to allow your React app to connect
     app.use(cors({
         origin: ['http://localhost:5173'],
         methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
         credentials: true
     }));
 
-    // ---------------------------------------------------------
-    // ENDPOINT: BATCH GENERATION (/api/generate-batch)
-    // ---------------------------------------------------------
     app.post('/api/generate-batch', async (req, res) => {
         const { clientId, batchVolume, destinationUrl, routingTier } = req.body;
         
@@ -44,7 +47,6 @@ if (isMainThread) {
             return res.status(400).json({ error: 'Invalid volume. Maximum batch size is 500.' });
         }
         
-        // Mock Batch ID for S3 naming since the database is disabled
         const batchId = Date.now();
         let generatedLinks = [];
         
@@ -53,7 +55,6 @@ if (isMainThread) {
             generatedLinks.push({ slug: randomSlug, destination_url: destinationUrl });
         }
         
-        // Spawn worker dynamically from THIS SAME FILE
         const worker = new Worker(__filename);
         worker.postMessage({ batchId, links: generatedLinks });
         
@@ -96,7 +97,9 @@ if (isMainThread) {
     parentPort.on('message', async ({ batchId, links }) => {
         try {
             const passThroughStream = new stream.PassThrough();
-            const archive = archiver('zip', { zlib: { level: 9 } });
+            
+            // Using the safely unwrapped function
+            const archive = createArchive('zip', { zlib: { level: 9 } });
             
             archive.on('error', err => { throw err; });
             archive.pipe(passThroughStream);
