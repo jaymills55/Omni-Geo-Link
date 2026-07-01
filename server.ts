@@ -32,6 +32,11 @@ const s3 = new S3Client({
 app.post('/api/generate-batch', async (req, res) => {
     const { clientId, batchVolume, destinationUrl, routingTier } = req.body;
     
+    // --- ADDED VALIDATION ---
+    if (!destinationUrl || destinationUrl.trim() === '') {
+        return res.status(400).json({ error: 'Missing destination URL. The QR code cannot be empty.' });
+    }
+    
     if (!batchVolume || batchVolume > 500) {
         return res.status(400).json({ error: 'Invalid volume. Maximum batch size is 500.' });
     }
@@ -54,10 +59,9 @@ app.post('/api/generate-batch', async (req, res) => {
         try {
             console.log(`[Batch ${batchId}] Starting background processing...`);
             
-            // THE SMOKING GUN FIX: Use the class constructor found in the debug logs
             const archive = new archiver.Archiver('zip', { zlib: { level: 9 } });
-            
             const passThroughStream = new stream.PassThrough();
+            
             archive.on('error', err => { throw err; });
             archive.pipe(passThroughStream);
 
@@ -73,7 +77,9 @@ app.post('/api/generate-batch', async (req, res) => {
             });
 
             const qrPromises = generatedLinks.map(async (link, index) => {
-                const qrBuffer = await QRCode.toBuffer(link.destination_url, { 
+                // Safeguard: Ensure link text exists before passing to QR generator
+                const textToEncode = link.destination_url || 'https://omni-analytix.com';
+                const qrBuffer = await QRCode.toBuffer(textToEncode, { 
                     errorCorrectionLevel: 'H',
                     margin: 2,
                     color: { dark: '#000000', light: '#ffffff' }
