@@ -15,14 +15,12 @@ const PORT = process.env.PORT || 8080;
 app.set('trust proxy', true);
 app.use(express.json());
 
-// The CORS Gate
 app.use(cors({
     origin: ['http://localhost:5173'],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     credentials: true
 }));
 
-// AWS Credentials Bridge
 const s3 = new S3Client({
     region: process.env.AWS_REGION || 'us-east-1',
     credentials: {
@@ -31,9 +29,6 @@ const s3 = new S3Client({
     }
 });
 
-// ---------------------------------------------------------
-// ENDPOINT: BATCH GENERATION
-// ---------------------------------------------------------
 app.post('/api/generate-batch', async (req, res) => {
     const { clientId, batchVolume, destinationUrl, routingTier } = req.body;
     
@@ -49,23 +44,33 @@ app.post('/api/generate-batch', async (req, res) => {
         generatedLinks.push({ slug: randomSlug, destination_url: destinationUrl });
     }
     
-    // 1. Respond to the frontend
     res.status(202).json({
         success: true,
         message: 'Batch accepted and processing in the background.',
         batchId: batchId
     });
 
-    // 2. Process in background
     (async () => {
         try {
             console.log(`[Batch ${batchId}] Starting background processing...`);
+            
+            // --- DEBUG LOGGING ---
+            console.log('DEBUG: Type of archiver:', typeof archiver);
+            console.log('DEBUG: Archiver keys:', Object.keys(archiver));
+            
+            // Logic to try and find the function
+            let archive;
+            if (typeof archiver === 'function') {
+                archive = archiver('zip', { zlib: { level: 9 } });
+            } else if (archiver.create) {
+                archive = archiver.create('zip', { zlib: { level: 9 } });
+            } else if (archiver.default && typeof archiver.default === 'function') {
+                archive = archiver.default('zip', { zlib: { level: 9 } });
+            } else {
+                throw new Error('Could not find archiver function. Structure: ' + JSON.stringify(archiver));
+            }
+
             const passThroughStream = new stream.PassThrough();
-            
-            // Resolve archiver as a function or object property
-            const archiverFn = (typeof archiver === 'function') ? archiver : (archiver.create || archiver.default);
-            const archive = archiverFn('zip', { zlib: { level: 9 } });
-            
             archive.on('error', err => { throw err; });
             archive.pipe(passThroughStream);
 
