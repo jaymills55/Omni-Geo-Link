@@ -62,7 +62,9 @@ app.post('/api/generate-batch', async (req, res) => {
         try {
             console.log(`[Batch ${batchId}] Starting background processing...`);
             const passThroughStream = new stream.PassThrough();
-            const archive = archiver('zip', { zlib: { level: 9 } });
+            
+            // THE FIX: Explicitly call the .create() method
+            const archive = archiver.create('zip', { zlib: { level: 9 } });
             
             archive.on('error', err => { throw err; });
             archive.pipe(passThroughStream);
