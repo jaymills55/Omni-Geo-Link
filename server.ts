@@ -52,18 +52,22 @@ app.post('/api/generate-batch', async (req, res) => {
         batchId: batchId
     });
 
-    // 2. The Floating Promise
+   // 2. The Floating Promise: Run the heavy lifting securely in the background
     (async () => {
         try {
             console.log(`[Batch ${batchId}] Starting background processing...`);
             
-            // THE FIX: Native Dynamic Import at runtime. 
-            // This completely bypasses the ES Module/CommonJS conflict.
-            const archiverModule = await import('archiver');
-            const createArchive = archiverModule.default || archiverModule;
+            // HARDENED IMPORT: Try to find the function in the default, the named 'archiver' export, or the module itself
+            const mod = await import('archiver');
+            const archiverFn = mod.default || mod.archiver || mod;
             
+            // Safety check
+            if (typeof archiverFn !== 'function') {
+                throw new Error(`Archiver failed to load. Export type is ${typeof archiverFn}`);
+            }
+
             const passThroughStream = new stream.PassThrough();
-            const archive = createArchive('zip', { zlib: { level: 9 } });
+            const archive = archiverFn('zip', { zlib: { level: 9 } });
             
             archive.on('error', err => { throw err; });
             archive.pipe(passThroughStream);
@@ -98,10 +102,3 @@ app.post('/api/generate-batch', async (req, res) => {
             console.error(`[Background Error] Batch ${batchId} failed:`, error);
         }
     })();
-});
-
-app.get('/system/health', (req, res) => res.status(200).send('OK'));
-
-app.listen(PORT, () => {
-    console.log(`[Omni Analytix] Server running securely on port ${PORT}`);
-});
