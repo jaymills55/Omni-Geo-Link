@@ -1,13 +1,10 @@
 import express from 'express';
 import cors from 'cors';
 import QRCode from 'qrcode';
-import { createRequire } from 'module';
+import JSZip from 'jszip'; // Switched to jszip
 import { S3Client } from '@aws-sdk/client-s3';
 import { Upload } from '@aws-sdk/lib-storage';
 import stream from 'stream';
-
-const require = createRequire(import.meta.url);
-const archiver = require('archiver');
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -30,64 +27,51 @@ const s3 = new S3Client({
 });
 
 app.post('/api/generate-batch', async (req, res) => {
-    const { clientId, batchVolume, destinationUrl, routingTier } = req.body;
+    const { destinationUrl, batchVolume } = req.body;
     
-    if (!destinationUrl || destinationUrl.trim() === '') {
+    if (!destinationUrl) {
         return res.status(400).json({ error: 'Missing destination URL.' });
     }
     
     const batchId = Date.now();
     let generatedLinks = [];
-    
     for (let i = 0; i < batchVolume; i++) {
-        const randomSlug = Math.random().toString(36).substring(2, 8);
-        generatedLinks.push({ slug: randomSlug, destination_url: destinationUrl });
+        generatedLinks.push({ slug: Math.random().toString(36).substring(2, 8), destination_url: destinationUrl });
     }
     
     res.status(202).json({ success: true, batchId: batchId });
 
+    // The Floating Promise: Process zip in background
     (async () => {
         try {
-            console.log(`[Batch ${batchId}] Starting background processing...`);
+            console.log(`[Batch ${batchId}] Starting JSZip background processing...`);
             
-            // DUAL-MODE INITIALIZATION
-            // Attempt standard factory call, fall back to constructor if needed
-            let archive;
-            if (typeof archiver === 'function') {
-                archive = archiver('zip', { zlib: { level: 9 } });
-            } else {
-                archive = new archiver.Archiver('zip', { zlib: { level: 9 } });
-            }
+            const zip = new JSZip();
             
-            const passThroughStream = new stream.PassThrough();
-            archive.on('error', err => { throw err; });
-            archive.pipe(passThroughStream);
+            // Add QR codes to zip
+            await Promise.all(generatedLinks.map(async (link, index) => {
+                const qrBuffer = await QRCode.toBuffer(link.destination_url || 'https://omni-analytix.com', { 
+                    errorCorrectionLevel: 'M',
+                    margin: 2
+                });
+                zip.file(`${link.slug}.png`, qrBuffer);
+            }));
 
+            // Generate zip as a stream
             const fileName = `batches/omni_batch_${batchId}.zip`;
+            const zipStream = zip.generateNodeStream({ type: 'nodebuffer', streamFiles: true });
+            
             const upload = new Upload({
                 client: s3,
                 params: {
                     Bucket: process.env.AWS_BUCKET_NAME || 'omni-analytix-batches-prod',
                     Key: fileName,
-                    Body: passThroughStream,
+                    Body: zipStream,
                     ContentType: 'application/zip'
                 }
             });
 
-            const qrPromises = generatedLinks.map(async (link, index) => {
-                const textToEncode = link.destination_url || 'https://omni-analytix.com';
-                const qrBuffer = await QRCode.toBuffer(textToEncode, { 
-                    errorCorrectionLevel: 'M',
-                    margin: 2,
-                    color: { dark: '#000000', light: '#ffffff' }
-                });
-                archive.append(qrBuffer, { name: `${link.slug}.png` });
-            });
-
-            await Promise.all(qrPromises);
-            await archive.finalize();
             await upload.done();
-
             console.log(`[Batch ${batchId}] S3 Upload Complete: ${fileName}`);
         } catch (error) {
             console.error(`[Background Error] Batch ${batchId} failed:`, error);
