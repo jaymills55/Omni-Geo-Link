@@ -54,22 +54,9 @@ app.post('/api/generate-batch', async (req, res) => {
         try {
             console.log(`[Batch ${batchId}] Starting background processing...`);
             
-            // --- DEBUG LOGGING ---
-            console.log('DEBUG: Type of archiver:', typeof archiver);
-            console.log('DEBUG: Archiver keys:', Object.keys(archiver));
+            // THE SMOKING GUN FIX: Use the class constructor found in the debug logs
+            const archive = new archiver.Archiver('zip', { zlib: { level: 9 } });
             
-            // Logic to try and find the function
-            let archive;
-            if (typeof archiver === 'function') {
-                archive = archiver('zip', { zlib: { level: 9 } });
-            } else if (archiver.create) {
-                archive = archiver.create('zip', { zlib: { level: 9 } });
-            } else if (archiver.default && typeof archiver.default === 'function') {
-                archive = archiver.default('zip', { zlib: { level: 9 } });
-            } else {
-                throw new Error('Could not find archiver function. Structure: ' + JSON.stringify(archiver));
-            }
-
             const passThroughStream = new stream.PassThrough();
             archive.on('error', err => { throw err; });
             archive.pipe(passThroughStream);
